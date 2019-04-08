@@ -14,6 +14,12 @@ parser.add_argument('--light', action='store_true')
 
 args = parser.parse_args()
 
+# check that options are valid
+base = os.path.basename(args.runcard)
+out = args.output if args.output else os.path.splitext(base)[0]
+if os.path.exists(out) and not args.force:
+    raise Exception('Output folder %s already exists.' % out)
+
 print('[+] Loading runcard')
 with open(args.runcard,'r') as f:
     hps=json.load(f)
@@ -34,8 +40,6 @@ predictB=cgan.g_AB.predict(refB)
 loss = loss_calc(refA, refB, predictA, predictB)
 
 # set up the output folder
-base = os.path.basename(args.runcard)
-out = args.output if args.output else os.path.splitext(base)[0]
 if not os.path.exists(out):
     os.mkdir(out)
 elif args.force:
