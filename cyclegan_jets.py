@@ -114,6 +114,16 @@ class CycleGAN():
                                             self.lambda_id, self.lambda_id ],
                             optimizer=optimizer)
 
+    def save(self, folder):
+        """Save CycleGAN weights to file"""
+        self.g_AB.save_weights('%s/generatorAB.h5' % folder)
+        self.g_BA.save_weights('%s/generatorBA.h5' % folder)
+
+    def load(self, folder):
+        """Load CycleGAN from input folder"""
+        self.g_AB.load_weights('%s/generatorAB.h5' % folder)
+        self.g_BA.load_weights('%s/generatorBA.h5' % folder)
+
     def build_generator(self):
         """U-Net Generator"""
 
@@ -174,7 +184,7 @@ class CycleGAN():
 
         return Model(img, validity)
 
-    def train(self, epochs, batch_size=1, sample_interval=50):
+    def train(self, epochs, batch_size=1, sample_interval=None):
 
         start_time = datetime.datetime.now()
 
@@ -230,7 +240,7 @@ class CycleGAN():
                                                                             elapsed_time))
 
                 # If at save interval => save generated image samples
-                if batch_i % sample_interval == 0:
+                if sample_interval and batch_i % sample_interval == 0:
                     self.sample_images(epoch, batch_i)
 
     def sample_images(self, epoch, batch_i):
