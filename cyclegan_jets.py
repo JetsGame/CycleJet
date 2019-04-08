@@ -17,6 +17,8 @@ from glund.models.optimizer import build_optimizer
 import numpy as np
 import os
 
+# TODO: add ZCA preprocessor
+
 class CycleGAN():
     def __init__(self, hps):
         # Input shape
