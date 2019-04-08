@@ -1,5 +1,5 @@
 from __future__ import print_function, division
-import scipy
+import scipy, random
 
 from keras.datasets import mnist
 from keras_contrib.layers.normalization import InstanceNormalization
@@ -13,37 +13,50 @@ import datetime
 import matplotlib.pyplot as plt
 import sys
 from data_loader_jets import DataLoader
+from glund.models.optimizer import build_optimizer
 import numpy as np
 import os
 
 class CycleGAN():
-    def __init__(self, path, labelA, labelB, nev, navg):
+    def __init__(self, hps):
         # Input shape
-        self.img_rows = 16
-        self.img_cols = 16
+        self.img_rows = hps['npixels']
+        self.img_cols = hps['npixels']
         self.channels = 1
         self.img_shape = (self.img_rows, self.img_cols, self.channels)
         #self.img_shape = (self.img_rows, self.img_cols)
         
         # Configure data loader
-        self.dataset_name = '%s2%s' % (labelA, labelB)
-        self.data_loader = DataLoader(path, labelA, labelB, nev, navg,
+        self.dataset_name = '%s2%s' % (hps['labelA'], hps['labelB'])
+        self.data_loader = DataLoader(hps['data_path'], hps['labelA'],
+                                      hps['labelB'], hps['nev'], hps['navg'],
                                       img_res=(self.img_rows, self.img_cols))
 
+        self.sampleA = self.data_loader.load_data(domain=hps['labelA'],
+                                                  batch_size=hps['batch_test'],
+                                                  is_testing=True,
+                                                  nev_test=hps['nev_test'])
+        self.sampleB = self.data_loader.load_data(domain=hps['labelB'],
+                                                  batch_size=hps['batch_test'],
+                                                  is_testing=True,
+                                                  nev_test=hps['nev_test'])
 
         # Calculate output shape of D (PatchGAN)
         patch = int(self.img_rows / 2**4)
         self.disc_patch = (patch, patch, 1)
 
         # Number of filters in the first layer of G and D
-        self.gf = 32
-        self.df = 64
+        self.gf = hps['g_filters']
+        self.df = hps['d_filters']
 
         # Loss weights
-        self.lambda_cycle = 10.0                    # Cycle-consistency loss
-        self.lambda_id = 0.1 * self.lambda_cycle    # Identity loss
+        # Cycle-consistency loss
+        self.lambda_cycle = hps['lambda_cycle']
+        # Identity loss
+        self.lambda_id = hps['lambda_id_factor'] * self.lambda_cycle
 
-        optimizer = Adam(0.0002, 0.5)
+        #optimizer = Adam(0.0002, 0.5)
+        optimizer = build_optimizer(hps)
 
         # Build and compile the discriminators
         self.d_A = self.build_discriminator()
@@ -222,12 +235,10 @@ class CycleGAN():
         os.makedirs('images/%s' % self.dataset_name, exist_ok=True)
         r, c = 4, 3
 
-        imgs_A = self.data_loader.load_data(domain="parton", batch_size=1, is_testing=True)
-        imgs_B = self.data_loader.load_data(domain="hadron", batch_size=1, is_testing=True)
-        manyimgs_A = self.data_loader.load_data(domain="parton", batch_size=5000,
-                                                is_testing=True, nev_test=5000)
-        manyimgs_B = self.data_loader.load_data(domain="hadron", batch_size=5000,
-                                                is_testing=True, nev_test=5000)
+        imgs_A = np.array(random.sample(list(self.sampleA),1))
+        imgs_B = np.array(random.sample(list(self.sampleB),1))
+        manyimgs_A = self.sampleA
+        manyimgs_B = self.sampleB
 
         # Demo (for GIF)
         #imgs_A = self.data_loader.load_img('datasets/apple2orange/testA/n07740461_1541.jpg')
@@ -251,16 +262,23 @@ class CycleGAN():
                                    np.average(manyfake_A,axis=0).reshape((1,)+manyfake_A[0].shape),
                                    np.average(manyreconstr_B,axis=0).reshape((1,)+manyreconstr_B[0].shape)])
 
-        # Rescale images 0 - 1
-        gen_imgs = 0.5 * gen_imgs + 0.5
-
-        titles = ['Original', 'Translated', 'Reconstructed']
-        fig, axs = plt.subplots(r, c)
+        titles = ['Translated', 'Reconstructed']
+        fig, axs = plt.subplots(r, c, figsize=(10,10))
         cnt = 0
         for i in range(r):
             for j in range(c):
-                axs[i,j].imshow(gen_imgs[cnt][:,:,0])
-                axs[i, j].set_title(titles[j])
+                axs[i,j].imshow(gen_imgs[cnt][:,:,0],vmin=0.0,vmax=0.8)
+                if j>0:
+                    tit=titles[j-1]
+                elif i==0:
+                    tit='single A sample'
+                elif i==1:
+                    tit='single B sample'
+                elif i==2:
+                    tit='avg A samples'
+                elif i==3:
+                    tit='avg B samples'
+                axs[i, j].set_title(tit)
                 axs[i,j].axis('off')
                 cnt += 1
         fig.savefig("images/%s/%d_%d.png" % (self.dataset_name, epoch, batch_i))
@@ -268,5 +286,25 @@ class CycleGAN():
 
 
 if __name__ == '__main__':
-    gan = CycleGAN('../data/train','parton','hadron', 10000,50)
-    gan.train(epochs=200, batch_size=1, sample_interval=1000)
+    hps={
+        'labelA':'QCD_500GeV_parton',
+        'labelB':'QCD_500GeV',
+        'data_path':'../data/train',
+        'optimizer':'Adam',
+        'learning_rate':0.0002,
+        'opt_beta_1':0.5,
+        'nev':10000,
+        'navg':50,
+        'npixels':16,
+        'epochs':50,
+        'batch_size':1,
+        'g_filters':32,
+        'd_filters':64,
+        'lambda_cycle':10.0,
+        'lambda_id_factor':0.1,
+        'nev_test':20000,
+        'batch_test':5000
+    }
+    gan = CycleGAN(hps)
+    gan.train(epochs=hps['epochs'], batch_size=hps['batch_size'],
+              sample_interval=2000)

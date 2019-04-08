@@ -14,8 +14,10 @@ class DataLoader():
         self.labelA  = labelA
         self.labelB  = labelB
         self.img_res = img_res
-        labelA_files = glob('%s/*%s*' % (path, labelA))
-        labelB_files = glob('%s/*%s*' % (path, labelB))
+        labelA_files = glob('%s/*%s.json.gz' % (path, labelA))
+        labelB_files = glob('%s/*%s.json.gz' % (path, labelB))
+        print('# reading A from:',labelA_files)
+        print('# reading B from:',labelB_files)
         # read in the lund images from files in the path searched
         self.imagesA = []
         self.imagesB = []
@@ -52,7 +54,8 @@ class DataLoader():
 
     def load_data(self, domain, batch_size=1, is_testing=False, nev_test=1000):
         if is_testing:
-            files = glob('%s/*%s*' % (self.dataset_path.replace('train','test'), domain))
+            files = glob('%s/*%s.json.gz' % (self.dataset_path.replace('train','test'), domain))
+            print('# reading test from:',files)
             fn = random.choice(files)
             reader = Jets(fn, nev_test)
             jets = reader.values()
