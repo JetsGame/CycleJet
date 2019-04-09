@@ -297,26 +297,3 @@ class CycleGAN():
         plt.close()
 
 
-if __name__ == '__main__':
-    hps={
-        'labelA':'QCD_500GeV_parton',
-        'labelB':'QCD_500GeV',
-        'data_path':'../data/train',
-        'optimizer':'Adam',
-        'learning_rate':0.0002,
-        'opt_beta_1':0.5,
-        'nev':10000,
-        'navg':50,
-        'npixels':16,
-        'epochs':50,
-        'batch_size':1,
-        'g_filters':32,
-        'd_filters':64,
-        'lambda_cycle':10.0,
-        'lambda_id_factor':0.1,
-        'nev_test':20000,
-        'batch_test':5000
-    }
-    gan = CycleGAN(hps)
-    gan.train(epochs=hps['epochs'], batch_size=hps['batch_size'],
-              sample_interval=2000)

@@ -1,31 +1,49 @@
-import argparse, json, pprint, os, shutil, datetime, sys
+import argparse, yaml, pprint, os, shutil, datetime, sys, pickle
 import numpy as np
+from time import time
 from cyclejet.cyclegan_jets import CycleGAN
 from cyclejet.tools import loss_calc, plot_model
+from hyperopt import fmin, tpe, hp, Trials, space_eval, STATUS_OK
+from hyperopt.mongoexp import MongoTrials
+import keras.backend as K
 
 
-def main():
-    # read command line arguments
-    parser = argparse.ArgumentParser(description='Train a cycleGAN.')
-    parser.add_argument('runcard', action='store', default=None,
-                        help='A json file with the setup.')
-    parser.add_argument('--output', '-o', type=str, default=None,
-                        help='The output folder.')
-    parser.add_argument('--force', action='store_true')
-    parser.add_argument('--savefull', action='store_true')
+#----------------------------------------------------------------------
+def run_hyperparameter_scan(search_space, max_evals, cluster, folder):
+    """Running hyperparameter scan using hyperopt"""
+    print('[+] Performing hyperparameter scan...')
+    if cluster:
+        trials = MongoTrials(cluster, exp_key='exp1')
+    else:
+        trials = Trials()
+    best = fmin(build_and_train_model, search_space, algo=tpe.suggest, 
+                max_evals=max_evals, trials=trials)
+    best_setup = space_eval(search_space, best)
+    print('\n[+] Best scan setup:')
+    pprint.pprint(best_setup)
+    log = '%s/hyperopt_log_{}.pickle'.format(time()) % folder
+    with open(log, 'wb') as wfp:
+        print(f'[+] Saving trials in {log}')
+        pickle.dump(trials.trials, wfp)
+    return best_setup
 
-    args = parser.parse_args()
 
-    # check that options are valid
-    base = os.path.basename(args.runcard)
-    out = args.output if args.output else os.path.splitext(base)[0]
-    if os.path.exists(out) and not args.force:
-        raise Exception('Output folder %s already exists.' % out)
+#----------------------------------------------------------------------
+def load_yaml(runcard_file):
+    """Loads yaml runcard"""
+    with open(runcard_file, 'r') as stream:
+        runcard = yaml.load(stream)
+    for key, value in runcard.items():
+        if 'hp.' in str(value):
+            runcard[key] = eval(value)
+    return runcard
 
-    print('[+] Loading runcard')
-    with open(args.runcard,'r') as f:
-        hps=json.load(f)
-    pprint.pprint(hps)
+
+#----------------------------------------------------------------------
+def build_and_train_model(hps):
+    """Training model"""
+    print('[+] Training model')
+    K.clear_session()
     cgan = CycleGAN(hps)
 
     print('[+] Training CycleGAN')
@@ -41,20 +59,58 @@ def main():
     # now calculate the loss
     loss = loss_calc(refA, refB, predictA, predictB)
 
-    # set up the output folder
-    if not os.path.exists(out):
-        os.mkdir(out)
-    elif args.force:
-        print(f'WARNING: Overwriting {out} with new model')
-        shutil.rmtree(out)
-        os.mkdir(out)
+    # save the model weights
+    if hps['scan']:
+        res = {'loss': loss, 'status': STATUS_OK}
     else:
-        raise Exception('Output folder %s already exists.' % out)
+        res = cgan, refA, refB, predictA, predictB, loss
+    return res
+
+
+def main():
+    # read command line arguments
+    parser = argparse.ArgumentParser(description='Train a cycleGAN.')
+    parser.add_argument('runcard', action='store', default=None,
+                        help='A json file with the setup.')
+    parser.add_argument('--output', '-o', type=str, default=None,
+                        help='The output folder.', required=True)
+    parser.add_argument('--force', action='store_true')
+    parser.add_argument('--savefull', action='store_true')
+    parser.add_argument('--hyperopt', default=None, type=int,
+                        help='Enable hyperopt scan.')
+    parser.add_argument('--cluster', default=None, type=str, 
+                        help='Enable cluster scan.')
+    args = parser.parse_args()
+
+    # check input is coherent
+    if not os.path.isfile(args.runcard):
+        raise ValueError('Invalid runcard: not a file.')
+    if args.force:
+        print('WARNING: Running with --force option will overwrite existing model.')
+
+    # prepare the output folder
+    if not os.path.exists(args.output):
+        os.mkdir(args.output)
+    elif args.force:
+        shutil.rmtree(args.output)
+        os.mkdir(args.output)
+    else:
+        raise Exception(f'{args.output} already exists, use "--force" to overwrite.')
+    out = args.output.strip('/')
 
     # copy runcard to output folder
     shutil.copyfile(args.runcard, f'{out}/input-runcard.json')
+/
+    print('[+] Loading runcard')
+    hps=load_yaml(args.runcard)
 
-    # save the model weights
+    if args.hyperopt:
+        hps['scan'] = True
+        hps = run_hyperparameter_scan(hps, args.hyperopt, args.cluster, out)
+    hps['scan'] = False
+
+    cgan, refA, refB, predictA, predictB, loss = build_and_train_model(hps)
+
     cgan.save(out)
     if args.savefull:
         np.save('%s/referenceA'%out, refA)
