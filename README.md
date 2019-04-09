@@ -3,12 +3,12 @@ CycleJet
 
 This repository contains code and results presented in (...).
 
-# About
+## About
 
 CycleJet is a framework to create mappings between different categories of jets using CycleGANs.
 The model architecture is adapted from https://github.com/eriklindernoren/Keras-GAN/tree/master/cyclegan.
 
-# Install
+## Install
 
 CycleJet is tested and supported on 64-bit systems running Linux.
 
