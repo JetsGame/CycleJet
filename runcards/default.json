@@ -8,7 +8,7 @@
     "nev":1000,
     "navg":50,
     "npixels":16,
-    "epochs":50,
+    "epochs":5,
     "batch_size":1,
     "g_filters":32,
     "d_filters":64,

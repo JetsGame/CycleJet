@@ -1,8 +1,7 @@
-#!/usr/bin/env python
 import argparse, json, pprint, os, shutil, datetime, sys
 import numpy as np
 from cyclejet.cyclegan_jets import CycleGAN
-from cyclejet.tools import loss_calc
+from cyclejet.tools import loss_calc, plot_model
 
 
 def main():
@@ -13,7 +12,7 @@ def main():
     parser.add_argument('--output', '-o', type=str, default=None,
                         help='The output folder.')
     parser.add_argument('--force', action='store_true')
-    parser.add_argument('--light', action='store_true')
+    parser.add_argument('--savefull', action='store_true')
 
     args = parser.parse_args()
 
@@ -57,7 +56,7 @@ def main():
 
     # save the model weights
     cgan.save(out)
-    if not args.light:
+    if args.savefull:
         np.save('%s/referenceA'%out, refA)
         np.save('%s/referenceB'%out, refB)
         np.save('%s/predictedA'%out, predictA)
@@ -69,3 +68,7 @@ def main():
             % datetime.datetime.utcnow(), file=f)
         print('# '+' '.join(sys.argv), file=f)
         print('# loss = %f' % loss, file=f)
+
+    # now create diagnostic plots
+    figfn='%s/result.pdf' % out
+    plot_model(figfn, refA, refB, predictA, predictB)
