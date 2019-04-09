@@ -1,7 +1,7 @@
 import argparse, json, pprint, os, shutil, datetime, sys
 import numpy as np
 from cyclegan_jets import CycleGAN
-from tools import loss_calc
+from tools import loss_calc, plot_model
 
 # read command line arguments
 parser = argparse.ArgumentParser(description='Train a cycleGAN.')
@@ -10,7 +10,7 @@ parser.add_argument('runcard', action='store', default=None,
 parser.add_argument('--output', '-o', type=str, default=None,
                     help='The output folder.')
 parser.add_argument('--force', action='store_true')
-parser.add_argument('--light', action='store_true')
+parser.add_argument('--savefull', action='store_true')
 
 args = parser.parse_args()
 
@@ -54,7 +54,7 @@ shutil.copyfile(args.runcard, f'{out}/input-runcard.json')
 
 # save the model weights
 cgan.save(out)
-if not args.light:
+if args.savefull:
     np.save('%s/referenceA'%out, refA)
     np.save('%s/referenceB'%out, refB)
     np.save('%s/predictedA'%out, predictA)
@@ -66,3 +66,7 @@ with open('%s/info.txt' % out,'w') as f:
           % datetime.datetime.utcnow(), file=f)
     print('# '+' '.join(sys.argv), file=f)
     print('# loss = %f' % loss, file=f)
+
+# now create diagnostic plots
+figfn='%s/result.pdf' % out
+plot_model(figfn, refA, refB, predictA, predictB)
