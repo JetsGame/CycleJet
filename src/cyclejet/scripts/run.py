@@ -100,7 +100,7 @@ def main():
 
     # copy runcard to output folder
     shutil.copyfile(args.runcard, f'{out}/input-runcard.json')
-/
+
     print('[+] Loading runcard')
     hps=load_yaml(args.runcard)
 
