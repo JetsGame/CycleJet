@@ -1,21 +1,17 @@
-from __future__ import print_function, division
-import scipy, random
-
-from keras.datasets import mnist
-from keras_contrib.layers.normalization.instancenormalization import InstanceNormalization
-from keras.layers import Input, Dense, Reshape, Flatten, Dropout, Concatenate
-from keras.layers import BatchNormalization, Activation, ZeroPadding2D
+from keras_contrib.layers.normalization import InstanceNormalization
+from keras.layers import Input, Dropout, Concatenate
 from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.convolutional import UpSampling2D, Conv2D
-from keras.models import Sequential, Model
-from keras.optimizers import Adam
-import datetime
+from keras.models import Model
+from glob import glob
 import matplotlib.pyplot as plt
-import sys
-from cyclejet.data_loader_jets import DataLoader
-from glund.models.optimizer import build_optimizer
 import numpy as np
-import os
+import os, datetime, random
+
+from glund.models.optimizer import build_optimizer
+from glund.preprocess import PreprocessorZCA
+from glund.read_data import Jets
+from glund.JetTree import JetTree, LundImage
 
 # TODO: add ZCA preprocessor
 
@@ -26,22 +22,9 @@ class CycleGAN():
         self.img_cols = hps['npixels']
         self.channels = 1
         self.img_shape = (self.img_rows, self.img_cols, self.channels)
-        #self.img_shape = (self.img_rows, self.img_cols)
         
-        # Configure data loader
-        self.dataset_name = '%s2%s' % (hps['labelA'], hps['labelB'])
-        self.data_loader = DataLoader(hps['data_path'], hps['labelA'],
-                                      hps['labelB'], hps['nev'], hps['navg'],
-                                      img_res=(self.img_rows, self.img_cols))
-
-        self.sampleA = self.data_loader.load_data(domain=hps['labelA'],
-                                                  batch_size=hps['batch_test'],
-                                                  is_testing=True,
-                                                  nev_test=hps['nev_test'])
-        self.sampleB = self.data_loader.load_data(domain=hps['labelB'],
-                                                  batch_size=hps['batch_test'],
-                                                  is_testing=True,
-                                                  nev_test=hps['nev_test'])
+        # Load the training data
+        self.load_data(hps)
 
         # Calculate output shape of D (PatchGAN)
         patch = int(self.img_rows / 2**4)
@@ -184,6 +167,64 @@ class CycleGAN():
 
         return Model(img, validity)
 
+    def load_data(self, hps):
+        self.dataset_name = '%s2%s' % (hps['labelA'], hps['labelB'])
+        self.lund = LundImage(npxlx=self.img_rows, npxly=self.img_cols)
+        self.navg = hps['navg']
+        labelA_files = glob('%s/*%s.json.gz' % (hps['data_path'], hps['labelA']))
+        labelB_files = glob('%s/*%s.json.gz' % (hps['data_path'], hps['labelB']))
+        
+        self.imagesA = []
+        self.imagesB = []
+        for fn in labelA_files:
+            reader = Jets(fn, hps['nev'])
+            jets = reader.values()
+            for j in jets:
+                tree = JetTree(j)
+                li = self.lund(tree)
+                # if np.random.random() > 0.5:
+                #     li = np.fliplr(li)
+                self.imagesA.append(li[:,:,np.newaxis])
+        for fn in labelB_files:
+            reader = Jets(fn, hps['nev'])
+            jets = reader.values()
+            for j in jets:
+                tree = JetTree(j)
+                li = self.lund(tree)
+                # if np.random.random() > 0.5:
+                #     li = np.fliplr(li)
+                self.imagesB.append(li[:,:,np.newaxis])
+        # now do batch averaging
+        self.imagesA=np.array(self.imagesA)
+        self.imagesB=np.array(self.imagesB)
+        batch_img_A=[]
+        batch_img_B=[]
+        for i in range(hps['nev']):
+            batch_img_A.append(np.average(self.imagesA[np.random.choice(self.imagesA.shape[0], self.navg,
+                                                                        replace=False), :], axis=0))
+            batch_img_B.append(np.average(self.imagesB[np.random.choice(self.imagesB.shape[0], self.navg,
+                                                                        replace=False), :], axis=0))
+        self.imagesA = batch_img_A
+        self.imagesB = batch_img_B
+
+    def load_batch(self, batch_size):
+        self.n_batches = int(min(len(self.imagesA), len(self.imagesB)) / batch_size)
+        total_samples = self.n_batches * batch_size
+        random.shuffle(self.imagesA)
+        random.shuffle(self.imagesB)
+        for i in range(self.n_batches-1):
+            batch_A = self.imagesA[i*batch_size:(i+1)*batch_size]
+            batch_B = self.imagesB[i*batch_size:(i+1)*batch_size]
+            imgs_A, imgs_B = [], []
+            for img_A, img_B in zip(batch_A, batch_B):
+                # if not is_testing and np.random.random() > 0.5:
+                #         img_A = np.fliplr(img_A)
+                #         img_B = np.fliplr(img_B)
+                imgs_A.append(img_A)
+                imgs_B.append(img_B)
+
+            yield np.array(imgs_A), np.array(imgs_B)
+
     def train(self, epochs, batch_size=1, sample_interval=None):
 
         start_time = datetime.datetime.now()
@@ -193,7 +234,7 @@ class CycleGAN():
         fake = np.zeros((batch_size,) + self.disc_patch)
 
         for epoch in range(epochs):
-            for batch_i, (imgs_A, imgs_B) in enumerate(self.data_loader.load_batch(batch_size)):
+            for batch_i, (imgs_A, imgs_B) in enumerate(self.load_batch(batch_size)):
 
                 # ----------------------
                 #  Train Discriminators
@@ -231,7 +272,7 @@ class CycleGAN():
                 # Plot the progress
                 print ("[Epoch %d/%d] [Batch %d/%d] [D loss: %f, acc: %3d%%] [G loss: %05f, adv: %05f, recon: %05f, id: %05f] time: %s " \
                                                                         % ( epoch, epochs,
-                                                                            batch_i, self.data_loader.n_batches,
+                                                                            batch_i, self.n_batches,
                                                                             d_loss[0], 100*d_loss[1],
                                                                             g_loss[0],
                                                                             np.mean(g_loss[1:3]),
@@ -247,14 +288,10 @@ class CycleGAN():
         os.makedirs('images/%s' % self.dataset_name, exist_ok=True)
         r, c = 4, 3
 
-        imgs_A = np.array(random.sample(list(self.sampleA),1))
-        imgs_B = np.array(random.sample(list(self.sampleB),1))
-        manyimgs_A = self.sampleA
-        manyimgs_B = self.sampleB
-
-        # Demo (for GIF)
-        #imgs_A = self.data_loader.load_img('datasets/apple2orange/testA/n07740461_1541.jpg')
-        #imgs_B = self.data_loader.load_img('datasets/apple2orange/testB/n07749192_4241.jpg')
+        imgs_A = np.array(random.sample(list(self.imagesA),1))
+        imgs_B = np.array(random.sample(list(self.imagesB),1))
+        manyimgs_A = self.imagesA
+        manyimgs_B = self.imagesB
 
         # Translate images to the other domain
         fake_B = self.g_AB.predict(imgs_A)

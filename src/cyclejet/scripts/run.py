@@ -1,7 +1,7 @@
 import argparse, yaml, pprint, os, shutil, datetime, sys, pickle
 import numpy as np
 from time import time
-from cyclejet.cyclegan_jets import CycleGAN
+from cyclejet.cyclegan import CycleGAN
 from cyclejet.tools import loss_calc, plot_model
 from hyperopt import fmin, tpe, hp, Trials, space_eval, STATUS_OK
 from hyperopt.mongoexp import MongoTrials
@@ -51,8 +51,8 @@ def build_and_train_model(hps):
 
     print('[+] Creating test set and saving to file') 
 
-    refA=cgan.sampleA
-    refB=cgan.sampleB
+    refA=np.array(cgan.imagesA)
+    refB=np.array(cgan.imagesB)
     # generating predicted sample
     predictA=cgan.g_BA.predict(refA)
     predictB=cgan.g_AB.predict(refB)
