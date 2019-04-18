@@ -9,7 +9,7 @@ import numpy as np
 import os, datetime, random
 
 from glund.models.optimizer import build_optimizer
-from glund.preprocess import PreprocessorZCA
+from glund.preprocess import PreprocessorZCA, Preprocessor
 from glund.read_data import Jets
 from glund.JetTree import JetTree, LundImage
 
@@ -25,9 +25,12 @@ class CycleGAN():
         
         # Load the training data
         self.load_data(hps)
-
+        
         # Calculate output shape of D (PatchGAN)
-        patch = int(self.img_rows / 2**4)
+        if (self.img_rows%16==0):
+            patch = int(self.img_rows / 2**4)
+        else:
+            patch = int(self.img_rows / 2**3)
         self.disc_patch = (patch, patch, 1)
 
         # Number of filters in the first layer of G and D
@@ -134,17 +137,23 @@ class CycleGAN():
         d1 = conv2d(d0, self.gf)
         d2 = conv2d(d1, self.gf*2)
         d3 = conv2d(d2, self.gf*4)
-        d4 = conv2d(d3, self.gf*8)
+        if (self.img_rows%16==0):
+            d4 = conv2d(d3, self.gf*8)
 
         # Upsampling
-        u1 = deconv2d(d4, d3, self.gf*4)
-        u2 = deconv2d(u1, d2, self.gf*2)
+        if (self.img_rows%16==0):
+            u1 = deconv2d(d4, d3, self.gf*4)
+            u2 = deconv2d(u1, d2, self.gf*2)
+        else:
+            u2 = deconv2d(d3, d2, self.gf*2)
         u3 = deconv2d(u2, d1, self.gf)
 
         u4 = UpSampling2D(size=2)(u3)
         output_img = Conv2D(self.channels, kernel_size=4, strides=1, padding='same', activation='tanh')(u4)
 
-        return Model(d0, output_img)
+        model = Model(d0, output_img)
+        model.summary()
+        return model
 
     def build_discriminator(self):
 
@@ -161,11 +170,15 @@ class CycleGAN():
         d1 = d_layer(img, self.df, normalization=False)
         d2 = d_layer(d1, self.df*2)
         d3 = d_layer(d2, self.df*4)
-        d4 = d_layer(d3, self.df*8)
+        if (self.img_rows%16==0):
+            d4 = d_layer(d3, self.df*8)
+        else:
+            d4=d3
 
         validity = Conv2D(1, kernel_size=4, strides=1, padding='same')(d4)
-
-        return Model(img, validity)
+        model = Model(img, validity)
+        model.summary()
+        return model
 
     def load_data(self, hps):
         self.dataset_name = '%s2%s' % (hps['labelA'], hps['labelB'])
@@ -204,9 +217,20 @@ class CycleGAN():
                                                                         replace=False), :], axis=0))
             batch_img_B.append(np.average(self.imagesB[np.random.choice(self.imagesB.shape[0], self.navg,
                                                                         replace=False), :], axis=0))
-        self.imagesA = batch_img_A
-        self.imagesB = batch_img_B
+        self.imagesA = np.array(batch_img_A)
+        self.imagesB = np.array(batch_img_B)
 
+        # now create he preprocessors
+        if hps['zca']:
+            self.preproc = PreprocessorZCA(scaler=True, flatten=False, remove_zero=False)
+        else:
+            self.preproc = Preprocessor(scaler=True, flatten=False, remove_zero=False)
+        # and preprocess the input images
+        self.preproc.fit(np.concatenate((self.imagesA,self.imagesB)))
+        self.imagesA = self.preproc.transform(self.imagesA)
+        self.imagesB = self.preproc.transform(self.imagesB)
+
+    #-------------------------------------------------------------------------------
     def load_batch(self, batch_size):
         self.n_batches = int(min(len(self.imagesA), len(self.imagesB)) / batch_size)
         total_samples = self.n_batches * batch_size
@@ -225,6 +249,7 @@ class CycleGAN():
 
             yield np.array(imgs_A), np.array(imgs_B)
 
+    #----------------------------------------------------------------------
     def train(self, epochs, batch_size=1, sample_interval=None):
 
         start_time = datetime.datetime.now()
@@ -294,15 +319,15 @@ class CycleGAN():
         manyimgs_B = self.imagesB
 
         # Translate images to the other domain
-        fake_B = self.g_AB.predict(imgs_A)
-        fake_A = self.g_BA.predict(imgs_B)
-        manyfake_B = self.g_AB.predict(manyimgs_A)
-        manyfake_A = self.g_BA.predict(manyimgs_B)
+        fake_B = self.preproc.inverse(self.g_AB.predict(imgs_A))
+        fake_A = self.preproc.inverse(self.g_BA.predict(imgs_B))
+        manyfake_B = self.preproc.inverse(self.g_AB.predict(manyimgs_A))
+        manyfake_A = self.preproc.inverse(self.g_BA.predict(manyimgs_B))
         # Translate back to original domain
-        reconstr_A = self.g_BA.predict(fake_B)
-        reconstr_B = self.g_AB.predict(fake_A)
-        manyreconstr_A = self.g_BA.predict(manyfake_B)
-        manyreconstr_B = self.g_AB.predict(manyfake_A)
+        reconstr_A = self.preproc.inverse(self.g_BA.predict(fake_B))
+        reconstr_B = self.preproc.inverse(self.g_AB.predict(fake_A))
+        manyreconstr_A = self.preproc.inverse(self.g_BA.predict(manyfake_B))
+        manyreconstr_B = self.preproc.inverse(self.g_AB.predict(manyfake_A))
         gen_imgs = np.concatenate([imgs_A, fake_B, reconstr_A, imgs_B, fake_A, reconstr_B,
                                    np.average(manyimgs_A,axis=0).reshape((1,)+manyimgs_A[0].shape),
                                    np.average(manyfake_B,axis=0).reshape((1,)+manyfake_B[0].shape),

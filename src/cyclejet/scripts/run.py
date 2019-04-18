@@ -58,7 +58,11 @@ def build_and_train_model(hps):
     predictB=cgan.g_AB.predict(refB)
     # now calculate the loss
     loss = loss_calc(refA, refB, predictA, predictB)
-
+    # now inverse the preprocessing step
+    refA = cgan.preproc.inverse(refA)
+    refB = cgan.preproc.inverse(refB)
+    predictA = cgan.preproc.inverse(predictA)
+    predictB = cgan.preproc.inverse(predictB)
     # save the model weights
     if hps['scan']:
         res = {'loss': loss, 'status': STATUS_OK}
