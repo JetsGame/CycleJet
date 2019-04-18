@@ -1,12 +1,12 @@
 labelA: QCD_500GeV_parton
-labelB: QCD_500GeV
+labelB: QCD_500GeV_delphes
 data_path: ../data/train
 optimizer: Adam
 learning_rate: 0.0002
 opt_beta_1: 0.5
 nev: 5000
 navg: 32
-npixels: 16
+npixels: 24
 epochs: 2
 zca: true
 batch_size: 1
@@ -14,5 +14,3 @@ g_filters: 32
 d_filters: 64
 lambda_cycle: 10.0
 lambda_id_factor: 0.1
-nev_test: 2000
-batch_test: 50
