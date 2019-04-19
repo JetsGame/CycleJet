@@ -9,7 +9,7 @@ import numpy as np
 import os, datetime, random
 
 from glund.models.optimizer import build_optimizer
-from glund.preprocess import PreprocessorZCA, Preprocessor
+from glund.preprocess import PreprocessorZCA, Preprocessor, Averager
 from glund.read_data import Jets
 from glund.JetTree import JetTree, LundImage
 
@@ -183,7 +183,6 @@ class CycleGAN():
     def load_data(self, hps):
         self.dataset_name = '%s2%s' % (hps['labelA'], hps['labelB'])
         self.lund = LundImage(npxlx=self.img_rows, npxly=self.img_cols)
-        self.navg = hps['navg']
         labelA_files = glob('%s/*%s.json.gz' % (hps['data_path'], hps['labelA']))
         labelB_files = glob('%s/*%s.json.gz' % (hps['data_path'], hps['labelB']))
         
@@ -208,17 +207,9 @@ class CycleGAN():
                 #     li = np.fliplr(li)
                 self.imagesB.append(li[:,:,np.newaxis])
         # now do batch averaging
-        self.imagesA=np.array(self.imagesA)
-        self.imagesB=np.array(self.imagesB)
-        batch_img_A=[]
-        batch_img_B=[]
-        for i in range(hps['nev']):
-            batch_img_A.append(np.average(self.imagesA[np.random.choice(self.imagesA.shape[0], self.navg,
-                                                                        replace=False), :], axis=0))
-            batch_img_B.append(np.average(self.imagesB[np.random.choice(self.imagesB.shape[0], self.navg,
-                                                                        replace=False), :], axis=0))
-        self.imagesA = np.array(batch_img_A)
-        self.imagesB = np.array(batch_img_B)
+        self.avg = Averager(hps['navg'])
+        self.imagesA = self.avg.transform(np.array(self.imagesA))
+        self.imagesB = self.avg.transform(np.array(self.imagesB))
 
         # now create he preprocessors
         if hps['zca']:

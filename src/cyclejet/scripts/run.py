@@ -63,6 +63,10 @@ def build_and_train_model(hps):
     refB = cgan.preproc.inverse(refB)
     predictA = cgan.preproc.inverse(predictA)
     predictB = cgan.preproc.inverse(predictB)
+    # refA = cgan.avg.inverse(refA)
+    # refB = cgan.avg.inverse(refB)
+    # predictA = cgan.avg.inverse(predictA)
+    # predictB = cgan.avg.inverse(predictB)
     # save the model weights
     if hps['scan']:
         res = {'loss': loss, 'status': STATUS_OK}

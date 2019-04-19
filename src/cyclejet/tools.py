@@ -18,14 +18,43 @@ def loss_calc(refA, refB, predictedA_fromB, predictedB_fromA):
 def plot_model(fn, refA, refB, predictedA, predictedB):
     """Plot the results for reference and predictions"""
     with PdfPages(fn) as pdf:
+        
         fig, axs = plt.subplots(2,2, figsize=(6,7))
-        axs[0,0].imshow(np.average(refA,axis=0)[:,:],vmin=0.0,vmax=0.4)
+        axs[0,0].imshow(np.average(refA,axis=0)[:,:],vmin=0.0,vmax=0.2)
         axs[0,0].set_title('average A sample')
-        axs[0,1].imshow(np.average(predictedA,axis=0)[:,:],vmin=0.0,vmax=0.4)
+        axs[0,1].imshow(np.average(predictedA,axis=0)[:,:],vmin=0.0,vmax=0.2)
         axs[0,1].set_title('average reconstructed')
-        axs[1,0].imshow(np.average(refB,axis=0)[:,:],vmin=0.0,vmax=0.4)
+        axs[1,0].imshow(np.average(refB,axis=0)[:,:],vmin=0.0,vmax=0.2)
         axs[1,0].set_title('average B sample')
-        axs[1,1].imshow(np.average(predictedB,axis=0)[:,:],vmin=0.0,vmax=0.4)
+        axs[1,1].imshow(np.average(predictedB,axis=0)[:,:],vmin=0.0,vmax=0.2)
         axs[1,1].set_title('average reconstructed')
+        pdf.savefig()
+        plt.close()
+        
+        fig, axs = plt.subplots(3, 2, figsize=(6,8))
+
+        axs[0,0].set_title('A sample')
+        axs[0,0].imshow(refA[0])
+        axs[1,0].imshow(refA[1])
+        axs[2,0].imshow(refA[2])
+
+        axs[0,1].set_title('Transformed')
+        axs[0,1].imshow(predictedB[0])
+        axs[1,1].imshow(predictedB[1])
+        axs[2,1].imshow(predictedB[2])
+        pdf.savefig()
+        plt.close()
+        
+        fig, axs = plt.subplots(3, 2, figsize=(6,8))
+
+        axs[0,0].set_title('B sample')
+        axs[0,0].imshow(refB[0])
+        axs[1,0].imshow(refB[1])
+        axs[2,0].imshow(refB[2])
+
+        axs[0,1].set_title('Transformed')
+        axs[0,1].imshow(predictedA[0])
+        axs[1,1].imshow(predictedA[1])
+        axs[2,1].imshow(predictedA[2])
         plt.close()
         pdf.savefig(fig)
