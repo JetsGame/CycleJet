@@ -1,5 +1,5 @@
 CycleJet
-=======
+========
 
 This repository contains code and results presented in (...).
 

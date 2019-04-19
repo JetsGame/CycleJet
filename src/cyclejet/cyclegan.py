@@ -1,21 +1,22 @@
-from keras_contrib.layers.normalization import InstanceNormalization
 from keras.layers import Input, Dropout, Concatenate
 from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.convolutional import UpSampling2D, Conv2D
 from keras.models import Model
 from glob import glob
+
 import matplotlib.pyplot as plt
 import numpy as np
 import os, datetime, random
 
+from cyclejet.instancenormalization import InstanceNormalization
 from glund.models.optimizer import build_optimizer
 from glund.preprocess import PreprocessorZCA, Preprocessor, Averager
 from glund.read_data import Jets
 from glund.JetTree import JetTree, LundImage
 
-# TODO: add ZCA preprocessor
-
+#======================================================================
 class CycleGAN():
+    #----------------------------------------------------------------------
     def __init__(self, hps):
         # Input shape
         self.img_rows = hps['npixels']
@@ -100,16 +101,19 @@ class CycleGAN():
                                             self.lambda_id, self.lambda_id ],
                             optimizer=optimizer)
 
+    #----------------------------------------------------------------------
     def save(self, folder):
         """Save CycleGAN weights to file"""
         self.g_AB.save_weights('%s/generatorAB.h5' % folder)
         self.g_BA.save_weights('%s/generatorBA.h5' % folder)
 
+    #--------------------------------------------------------------------------------
     def load(self, folder):
         """Load CycleGAN from input folder"""
         self.g_AB.load_weights('%s/generatorAB.h5' % folder)
         self.g_BA.load_weights('%s/generatorBA.h5' % folder)
 
+    #----------------------------------------------------------------------
     def build_generator(self):
         """U-Net Generator"""
 
@@ -155,6 +159,7 @@ class CycleGAN():
         model.summary()
         return model
 
+    #----------------------------------------------------------------------
     def build_discriminator(self):
 
         def d_layer(layer_input, filters, f_size=4, normalization=True):
@@ -180,6 +185,7 @@ class CycleGAN():
         model.summary()
         return model
 
+    #----------------------------------------------------------------------
     def load_data(self, hps):
         self.dataset_name = '%s2%s' % (hps['labelA'], hps['labelB'])
         self.lund = LundImage(npxlx=self.img_rows, npxly=self.img_cols)
@@ -300,6 +306,7 @@ class CycleGAN():
                 if sample_interval and batch_i % sample_interval == 0:
                     self.sample_images(epoch, batch_i)
 
+    #----------------------------------------------------------------------
     def sample_images(self, epoch, batch_i):
         os.makedirs('images/%s' % self.dataset_name, exist_ok=True)
         r, c = 4, 3
