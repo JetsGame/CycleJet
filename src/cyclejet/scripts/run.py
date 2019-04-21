@@ -1,3 +1,5 @@
+# This file is part of CycleJet by S. Carrazza and F. A. Dreyer
+
 import argparse, yaml, pprint, os, shutil, datetime, sys, pickle
 import numpy as np
 from time import time

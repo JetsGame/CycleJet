@@ -1,4 +1,6 @@
+# This file is part of CycleJet by S. Carrazza and F. A. Dreyer
 # taken from keras_contrib.layers.normalization
+
 from keras.engine import Layer, InputSpec
 from keras.utils.generic_utils import get_custom_objects
 from keras import backend as K

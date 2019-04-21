@@ -1,8 +1,11 @@
+# This file is part of CycleJet by S. Carrazza and F. A. Dreyer
+# adapted from:
+# https://github.com/eriklindernoren/Keras-GAN/tree/master/cyclegan
+
 from keras.layers import Input, Dropout, Concatenate
 from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.convolutional import UpSampling2D, Conv2D
 from keras.models import Model
-from glob import glob
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -21,8 +24,7 @@ class CycleGAN():
         # Input shape
         self.img_rows = hps['npixels']
         self.img_cols = hps['npixels']
-        self.channels = 1
-        self.img_shape = (self.img_rows, self.img_cols, self.channels)
+        self.img_shape = (self.img_rows, self.img_cols, 1)
         
         # Load the training data
         self.load_data(hps)
@@ -153,7 +155,7 @@ class CycleGAN():
         u3 = deconv2d(u2, d1, self.gf)
 
         u4 = UpSampling2D(size=2)(u3)
-        output_img = Conv2D(self.channels, kernel_size=4, strides=1, padding='same', activation='tanh')(u4)
+        output_img = Conv2D(1, kernel_size=4, strides=1, padding='same', activation='tanh')(u4)
 
         model = Model(d0, output_img)
         model.summary()
@@ -189,29 +191,20 @@ class CycleGAN():
     def load_data(self, hps):
         self.dataset_name = '%s2%s' % (hps['labelA'], hps['labelB'])
         self.lund = LundImage(npxlx=self.img_rows, npxly=self.img_cols)
-        labelA_files = glob('%s/*%s.json.gz' % (hps['data_path'], hps['labelA']))
-        labelB_files = glob('%s/*%s.json.gz' % (hps['data_path'], hps['labelB']))
-        
         self.imagesA = []
         self.imagesB = []
-        for fn in labelA_files:
-            reader = Jets(fn, hps['nev'])
-            jets = reader.values()
-            for j in jets:
-                tree = JetTree(j)
-                li = self.lund(tree)
-                # if np.random.random() > 0.5:
-                #     li = np.fliplr(li)
-                self.imagesA.append(li[:,:,np.newaxis])
-        for fn in labelB_files:
-            reader = Jets(fn, hps['nev'])
-            jets = reader.values()
-            for j in jets:
-                tree = JetTree(j)
-                li = self.lund(tree)
-                # if np.random.random() > 0.5:
-                #     li = np.fliplr(li)
-                self.imagesB.append(li[:,:,np.newaxis])
+        reader = Jets(hps['fnA'], hps['nev'])
+        jets = reader.values()
+        for j in jets:
+            tree = JetTree(j)
+            li = self.lund(tree)
+            self.imagesA.append(li[:,:,np.newaxis])
+        reader = Jets(hps['fnB'], hps['nev'])
+        jets = reader.values()
+        for j in jets:
+            tree = JetTree(j)
+            li = self.lund(tree)
+            self.imagesB.append(li[:,:,np.newaxis])
         # now do batch averaging
         self.avg = Averager(hps['navg'])
         self.imagesA = self.avg.transform(np.array(self.imagesA))

@@ -1,11 +1,12 @@
-labelA: QCD_500GeV_parton
-labelB: QCD_500GeV_delphes
-data_path: ../data/train
+labelA: parton
+labelB: delphes
+fnA: ../data/train/QCD_500GeV_parton.json.gz
+fnB: ../data/train/QCD_500GeV_delphes.json.gz
 optimizer: Adam
 learning_rate: 0.0002
 opt_beta_1: 0.5
-nev: 5000
-navg: 32
+nev: 1000
+navg: 20
 npixels: 24
 epochs: 2
 zca: true

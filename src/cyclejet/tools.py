@@ -1,6 +1,10 @@
+# This file is part of CycleJet by S. Carrazza and F. A. Dreyer
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+
+#----------------------------------------------------------------------
 def loss_calc(refA, refB, predictedA_fromB, predictedB_fromA):
     """
 
@@ -15,6 +19,7 @@ def loss_calc(refA, refB, predictedA_fromB, predictedB_fromA):
     print('Loss = %.4f  (A: %.4f, B: %.4f)' % (loss, img_lossA, img_lossB))
     return loss
 
+#----------------------------------------------------------------------
 def plot_model(fn, refA, refB, predictedA, predictedB):
     """Plot the results for reference and predictions"""
     with PdfPages(fn) as pdf:
