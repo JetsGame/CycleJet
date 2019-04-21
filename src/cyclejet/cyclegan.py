@@ -19,6 +19,7 @@ from glund.JetTree import JetTree, LundImage
 
 #======================================================================
 class CycleGAN():
+    
     #----------------------------------------------------------------------
     def __init__(self, hps):
         # Input shape
@@ -32,8 +33,10 @@ class CycleGAN():
         # Calculate output shape of D (PatchGAN)
         if (self.img_rows%16==0):
             patch = int(self.img_rows / 2**4)
-        else:
+        elif (self.img_rows%8==0):
             patch = int(self.img_rows / 2**3)
+        else:
+            raise ValueError('CycleGAN: npixels has to be a multiple of 8')
         self.disc_patch = (patch, patch, 1)
 
         # Number of filters in the first layer of G and D
@@ -52,17 +55,10 @@ class CycleGAN():
         # Build and compile the discriminators
         self.d_A = self.build_discriminator()
         self.d_B = self.build_discriminator()
-        self.d_A.compile(loss='mse',
-            optimizer=optimizer,
-            metrics=['accuracy'])
-        self.d_B.compile(loss='mse',
-            optimizer=optimizer,
-            metrics=['accuracy'])
-
-        #-------------------------
-        # Construct Computational
-        #   Graph of Generators
-        #-------------------------
+        self.d_A.compile(loss='mse', optimizer=optimizer,
+                         metrics=['accuracy'])
+        self.d_B.compile(loss='mse', optimizer=optimizer,
+                         metrics=['accuracy'])
 
         # Build the generators
         self.g_AB = self.build_generator()
@@ -92,16 +88,16 @@ class CycleGAN():
 
         # Combined model trains generators to fool discriminators
         self.combined = Model(inputs=[img_A, img_B],
-                              outputs=[ valid_A, valid_B,
-                                        reconstr_A, reconstr_B,
-                                        img_A_id, img_B_id ])
+                              outputs=[valid_A, valid_B,
+                                       reconstr_A, reconstr_B,
+                                       img_A_id, img_B_id ])
         self.combined.compile(loss=['mse', 'mse',
                                     'mae', 'mae',
                                     'mae', 'mae'],
-                            loss_weights=[  1, 1,
+                              loss_weights=[1, 1,
                                             self.lambda_cycle, self.lambda_cycle,
                                             self.lambda_id, self.lambda_id ],
-                            optimizer=optimizer)
+                              optimizer=optimizer)
 
     #----------------------------------------------------------------------
     def save(self, folder):
@@ -231,9 +227,6 @@ class CycleGAN():
             batch_B = self.imagesB[i*batch_size:(i+1)*batch_size]
             imgs_A, imgs_B = [], []
             for img_A, img_B in zip(batch_A, batch_B):
-                # if not is_testing and np.random.random() > 0.5:
-                #         img_A = np.fliplr(img_A)
-                #         img_B = np.fliplr(img_B)
                 imgs_A.append(img_A)
                 imgs_B.append(img_B)
 
@@ -251,10 +244,6 @@ class CycleGAN():
         for epoch in range(epochs):
             for batch_i, (imgs_A, imgs_B) in enumerate(self.load_batch(batch_size)):
 
-                # ----------------------
-                #  Train Discriminators
-                # ----------------------
-
                 # Translate images to opposite domain
                 fake_B = self.g_AB.predict(imgs_A)
                 fake_A = self.g_BA.predict(imgs_B)
@@ -271,11 +260,6 @@ class CycleGAN():
                 # Total disciminator loss
                 d_loss = 0.5 * np.add(dA_loss, dB_loss)
 
-
-                # ------------------
-                #  Train Generators
-                # ------------------
-
                 # Train the generators
                 g_loss = self.combined.train_on_batch([imgs_A, imgs_B],
                                                         [valid, valid,
@@ -284,7 +268,7 @@ class CycleGAN():
 
                 elapsed_time = datetime.datetime.now() - start_time
 
-                # Plot the progress
+                # Print the progress
                 print ("[Epoch %d/%d] [Batch %d/%d] [D loss: %f, acc: %3d%%] [G loss: %05f, adv: %05f, recon: %05f, id: %05f] time: %s " \
                                                                         % ( epoch, epochs,
                                                                             batch_i, self.n_batches,
