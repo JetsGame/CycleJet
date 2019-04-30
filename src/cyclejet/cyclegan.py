@@ -220,8 +220,8 @@ class CycleGAN():
     def load_batch(self, batch_size):
         self.n_batches = int(min(len(self.imagesA), len(self.imagesB)) / batch_size)
         total_samples = self.n_batches * batch_size
-        random.shuffle(self.imagesA)
-        random.shuffle(self.imagesB)
+        np.random.shuffle(self.imagesA)
+        np.random.shuffle(self.imagesB)
         for i in range(self.n_batches-1):
             batch_A = self.imagesA[i*batch_size:(i+1)*batch_size]
             batch_B = self.imagesB[i*batch_size:(i+1)*batch_size]
