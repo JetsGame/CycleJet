@@ -208,9 +208,11 @@ class CycleGAN():
 
         # now create he preprocessors
         if hps['zca']:
-            self.preproc = PreprocessorZCA(scaler=True, flatten=False, remove_zero=False)
+            self.preproc = PreprocessorZCA(scaler=hps['scaler'], flatten=False,
+                                           remove_zero=False, pxl_by_pxl=False)
         else:
-            self.preproc = Preprocessor(scaler=True, flatten=False, remove_zero=False)
+            self.preproc = Preprocessor(scaler=hps['scaler'], flatten=False,
+                                        remove_zero=False, pxl_by_pxl=False)
         # and preprocess the input images
         self.preproc.fit(np.concatenate((self.imagesA,self.imagesB)))
         self.imagesA = self.preproc.transform(self.imagesA)

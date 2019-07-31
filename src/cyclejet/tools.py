@@ -4,6 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
+xval = [0.0, 7.0]
+yval = [-3.0, 7.0]
+
 #----------------------------------------------------------------------
 def loss_calc(refA, refB, predictedA_fromB, predictedB_fromA):
     """
@@ -20,19 +23,32 @@ def loss_calc(refA, refB, predictedA_fromB, predictedB_fromA):
     return loss
 
 #----------------------------------------------------------------------
-def plot_model(fn, refA, refB, predictedA, predictedB):
+def plot_model(fn, refA, refB, predictedA, predictedB, titleA=None, titleB=None):
     """Plot the results for reference and predictions"""
     with PdfPages(fn) as pdf:
         
         fig, axs = plt.subplots(2,2, figsize=(6,7))
-        axs[0,0].imshow(np.average(refA,axis=0)[:,:],vmin=0.0,vmax=0.2)
-        axs[0,0].set_title('average A sample')
-        axs[0,1].imshow(np.average(predictedA,axis=0)[:,:],vmin=0.0,vmax=0.2)
-        axs[0,1].set_title('average reconstructed')
-        axs[1,0].imshow(np.average(refB,axis=0)[:,:],vmin=0.0,vmax=0.2)
-        axs[1,0].set_title('average B sample')
-        axs[1,1].imshow(np.average(predictedB,axis=0)[:,:],vmin=0.0,vmax=0.2)
-        axs[1,1].set_title('average reconstructed')
+        plt.subplots_adjust(wspace=0.33,hspace=0.35)
+        axs[0,0].imshow(np.average(refA,axis=0).transpose(),vmin=0.0,vmax=0.2,origin='lower',
+                        aspect='auto', extent=[xval[0], xval[1], yval[0], yval[1]])
+        axs[0,0].set_xlabel('$\ln(1 / \Delta_{ab})$')
+        axs[0,0].set_ylabel('$\ln(k_{t} / \mathrm{GeV})$',labelpad=-2)
+        axs[0,0].set_title('average A sample' if not titleA else titleA)
+        axs[0,1].imshow(np.average(predictedB,axis=0).transpose(),vmin=0.0,vmax=0.2,origin='lower',
+                        aspect='auto', extent=[xval[0], xval[1], yval[0], yval[1]])
+        axs[0,1].set_xlabel('$\ln(1 / \Delta_{ab})$')
+        axs[0,1].set_ylabel('$\ln(k_{t} / \mathrm{GeV})$',labelpad=-2)
+        axs[0,1].set_title('reconstructed')
+        axs[1,0].imshow(np.average(refB,axis=0).transpose(),vmin=0.0,vmax=0.2,origin='lower',
+                        aspect='auto', extent=[xval[0], xval[1], yval[0], yval[1]])
+        axs[1,0].set_xlabel('$\ln(1 / \Delta_{ab})$')
+        axs[1,0].set_ylabel('$\ln(k_{t} / \mathrm{GeV})$',labelpad=-2)
+        axs[1,0].set_title('average B sample' if not titleB else titleB)
+        axs[1,1].imshow(np.average(predictedA,axis=0).transpose(),vmin=0.0,vmax=0.2,origin='lower',
+                        aspect='auto', extent=[xval[0], xval[1], yval[0], yval[1]])
+        axs[1,1].set_xlabel('$\ln(1 / \Delta_{ab})$')
+        axs[1,1].set_ylabel('$\ln(k_{t} / \mathrm{GeV})$',labelpad=-2)
+        axs[1,1].set_title('reconstructed')
         pdf.savefig()
         plt.close()
         
