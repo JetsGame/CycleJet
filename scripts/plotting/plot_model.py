@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # This file is part of CycleJet by S. Carrazza and F. A. Dreyer
 
 import argparse, yaml, pprint, os, shutil, datetime, sys, pickle
@@ -7,7 +8,11 @@ from cyclejet.tools import loss_calc, plot_model
 from cyclejet.scripts.run import load_yaml
 
 def main(args):
-    hps=load_yaml(args.model.strip('/')+'/input-runcard.json')    
+    if os.path.isfile(args.model.strip('/')+'/best-model.yaml'):
+        fn=args.model.strip('/')+'/best-model.yaml'
+    else:
+        fn=args.model.strip('/')+'/input-runcard.json'
+    hps=load_yaml(fn)
     cgan = CycleGAN(hps)
     cgan.load(args.model.strip('/'))
     refA=np.array(cgan.imagesA)
@@ -27,7 +32,8 @@ def main(args):
     
     # now create diagnostic plots
     figfn='%s/result.pdf' % args.model.strip('/')
-    plot_model(figfn, refA, refB, predictA, predictB)
+    plot_model(figfn, refA, refB, predictA, predictB,
+               titleA=args.titleA, titleB=args.titleB)
 
 #----------------------------------------------------------------------
 if __name__ == "__main__":
@@ -36,6 +42,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train a cycleGAN.')
     parser.add_argument('model', action='store', default=None,
                         help='A folder with the model.')
+    parser.add_argument('--titleA', type=str, default=None,
+                        help='Title of sample A.')
+    parser.add_argument('--titleB', type=str, default=None,
+                        help='Title of sample A.')
+
     parser.add_argument('--savefull', action='store_true')
     args = parser.parse_args()
     main(args)
