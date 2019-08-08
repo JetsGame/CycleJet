@@ -40,6 +40,7 @@ CycleJet requires the following packages:
 - gzip
 - argparse
 - scikit-image
+- scikit-learn
 - hyperopt (optional)
 
 
