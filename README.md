@@ -49,8 +49,8 @@ CycleJet requires the following packages:
 The final models presented in
 [arXiv:1908.xxxxx](https://arxiv.org/abs/1908.xxxxx "gLund paper")
 are stored in:
-- results/QCD_to_W: cyclejet which converts QCD <-> W jet.
-- results/parton_to_delphes: cyclejet which converts partons <-> delphes.
+- results/QCD_to_W: CycleJet which converts QCD <-> W jet.
+- results/parton_to_delphes: CycleJet which converts partons <-> delphes.
 
 ## Input data
 
