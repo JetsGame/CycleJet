@@ -1,0 +1,4 @@
+# CyleGAN parton to delphes
+# created on 2019-08-01 14:06:57.798749 with the command:
+# /users/dreyer/local/miniconda3/envs/tensorflow_gpuenv/bin/cyclejet cycle_QCD_W.yaml --output cycle_QCD_W_standard --savefull --force
+# loss = 3.306325

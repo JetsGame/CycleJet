@@ -1,0 +1,4 @@
+# CyleGAN parton to delphes
+# created on 2019-05-09 10:21:28.748084 with the command:
+# /projects/nnpdf/miniconda3/bin/cyclejet runcards/runcard_scan.yaml -o runcard_scan --hyperopt 822 --force --cluster mongo://192.168.111.1:31000/cyclejet/jobs --savefull
+# loss = 6.131207
