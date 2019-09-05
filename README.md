@@ -3,7 +3,7 @@
 CycleJet
 ========
 
-This repository contains the code and results presented in [arXiv:1908.xxxxx](https://arxiv.org/abs/1908.xxxxxx).
+This repository contains the code and results presented in [arXiv:1909.01359](https://arxiv.org/abs/1909.01359).
 
 ## About
 
@@ -47,7 +47,7 @@ CycleJet requires the following packages:
 ## Pre-trained models
 
 The final models presented in
-[arXiv:1908.xxxxx](https://arxiv.org/abs/1908.xxxxx "gLund paper")
+[arXiv:1909.01359](https://arxiv.org/abs/1909.01359 "gLund paper")
 are stored in:
 - results/QCD_to_W: CycleJet which converts QCD <-> W jet.
 - results/parton_to_delphes: CycleJet which converts partons <-> delphes.
@@ -67,5 +67,5 @@ This will create a folder containing the result of the fit.
 
 ## References
 
-* S. Carrazza and F. A. Dreyer, "Towards a generative model for jet substructure,"
-  [arXiv:1908.xxxxx](https://arxiv.org/abs/1908.xxxxx "gLund paper")
+* S. Carrazza and F. A. Dreyer, "Lund jet images from generative and cycle-consistent adversarial networks,"
+  [arXiv:1909.01359](https://arxiv.org/abs/1909.01359 "gLund paper")
